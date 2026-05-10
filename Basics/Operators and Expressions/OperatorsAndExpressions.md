@@ -21,7 +21,7 @@ print(a, "-", b, "=", a - b)  # 14 - 4 = 10
 print(a, "*", b, "=", a * b)  # 14 * 4 = 56
 ```
 
-![Arithmetic Operators](Basics/Operators%20and%20Expressions/Resources/Airthmatic%20Operators.png)
+![Arithmetic Operators](Resources/Airthmatic Operators.png)
 
 **Reference**: See `27.+Arithmetic+Operators.pdf` and `Airthmatic Operators.png` for visuals.
 
@@ -38,7 +38,7 @@ print(a, "%", b, "=", a % b)   # 14 % 4 = 2
 
 **Note**: Unlike languages like Java/C, `/` always gives float.
 
-![All Operators](Basics/Operators%20and%20Expressions/Resources/All%20Operators.png)
+![All Operators](Resources/All Operators.png)
 
 **Reference**: `27.+Arithmetic+Operators.pdf` and `All Operators.png`.
 
@@ -64,7 +64,7 @@ print(2 + 5 - 3 * 12 / 2 % 3)  # 4.0 (multiplication/division/modulus left-assoc
 print(2 + (5 - (3 * 12) / (2 % (3 ** 2))))  # -11.0 (exponentiation first, then modulus, etc.)
 ```
 
-![Precedence of Operator](Basics/Operators%20and%20Expressions/Resources/Precendence%20Of%20Operator.png)
+![Precedence of Operator](Resources/Precendence Of Operator.png)
 
 **Reference**: `Precendence Of Operator.png` and `28.+Expressions.pdf`.
 
