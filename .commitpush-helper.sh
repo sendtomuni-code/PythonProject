@@ -109,8 +109,9 @@ if command -v glab >/dev/null 2>&1; then
 
     # Check if MR exists
     MR_JSON=$(glab mr list --source-branch "$BRANCH_DATE" --json iid,title 2>/dev/null || echo "")
+    MR_COUNT=$(echo "$MR_JSON" | grep -c "iid" || echo "0")
 
-    if [ -z "$MR_JSON" ] || [ $(echo "$MR_JSON" | grep -c "iid" || echo "0") -eq 0 ]; then
+    if [ -z "$MR_JSON" ] || [ "$MR_COUNT" -eq 0 ]; then
         # Create new MR
         MR_URL=$(glab mr create --source-branch "$BRANCH_DATE" --target-branch main --title "$COMMIT_MSG" --description "$PR_DESCRIPTION" 2>/dev/null | grep -o "https://[^[:space:]]*" || echo "")
         if [ ! -z "$MR_URL" ]; then
