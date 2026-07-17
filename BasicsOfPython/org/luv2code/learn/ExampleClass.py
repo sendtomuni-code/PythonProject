@@ -1,6 +1,6 @@
 
-from Basics.org.luv2code.learn.main import Main
-from Basics.org.luv2code.learn import First
+from BasicsOfPython.org.luv2code.learn.main import Main
+from BasicsOfPython.org.luv2code.learn import First
 
 class ExampleClass:
     def __init__(self):
