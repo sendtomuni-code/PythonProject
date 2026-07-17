@@ -1,0 +1,10 @@
+{
+  "app_name": "PythonProject",
+  "version": "1.0.0",
+  "features": [
+    "smart_commits",
+    "auto_pr_creation",
+    "dated_branches"
+  ],
+  "debug": false
+}
