@@ -79,8 +79,9 @@ if command -v gh >/dev/null 2>&1; then
     else
         # Check if PR exists
         PR_JSON=$(gh pr list --head "$BRANCH_DATE" --repo "$GH_REPO" --json number,title 2>/dev/null || echo "")
+        PR_COUNT=$(echo "$PR_JSON" | grep -c "number" || echo "0")
 
-        if [ -z "$PR_JSON" ] || [ $(echo "$PR_JSON" | grep -c "number" || echo "0") -eq 0 ]; then
+        if [ -z "$PR_JSON" ] || [ "$PR_COUNT" -eq 0 ]; then
             # Create new PR
             PR_URL=$(gh pr create --head "$BRANCH_DATE" --base main --title "$COMMIT_MSG" --body "$PR_DESCRIPTION" --repo "$GH_REPO" 2>/dev/null | grep -o "https://[^[:space:]]*" || echo "")
             if [ ! -z "$PR_URL" ]; then
