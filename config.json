@@ -1,0 +1,11 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "timeout": 30
+  },
+  "api": {
+    "version": "2.0",
+    "rate_limit": 100
+  }
+}

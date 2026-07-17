@@ -35,19 +35,102 @@ fi
 INSERTIONS=$(git diff --cached --stat | tail -1 | awk '{print $4}')
 DELETIONS=$(git diff --cached --stat | tail -1 | awk '{print $6}')
 
-# Create meaningful commit message
-COMMIT_MSG="$BRANCH_DATE: Update $CHANGES_COUNT file(s)"
-if [ ! -z "$INSERTIONS" ] && [ ! -z "$DELETIONS" ]; then
-    COMMIT_MSG="$COMMIT_MSG (+$INSERTIONS -$DELETIONS)"
+# Analyze changes to extract meaningful context
+analyze_changes() {
+    local file="$1"
+    local diff_output="$2"
+
+    # Detect file type
+    if [[ "$file" == *.md || "$file" == *.txt || "$file" == README* ]]; then
+        echo "documentation"
+    elif [[ "$file" == *.py ]]; then
+        # Check for function/class definitions
+        if echo "$diff_output" | grep -q "^+.*def \|^+.*class "; then
+            echo "feature"
+        elif echo "$diff_output" | grep -q "^+.*import \|^-.*import "; then
+            echo "dependencies"
+        elif echo "$diff_output" | grep -q "^+.*#"; then
+            echo "refactor"
+        else
+            echo "bugfix"
+        fi
+    elif [[ "$file" == *.json || "$file" == *.yaml || "$file" == *.yml || "$file" == *.toml ]]; then
+        echo "configuration"
+    elif [[ "$file" == *.ipynb ]]; then
+        echo "notebook"
+    else
+        echo "general"
+    fi
+}
+
+# Extract meaningful change summary
+CHANGE_TYPES=""
+CHANGE_DETAILS=""
+for file in $CHANGES; do
+    FILE_DIFF=$(git diff --cached "$file" 2>/dev/null || true)
+    CHANGE_TYPE=$(analyze_changes "$file" "$FILE_DIFF")
+
+    # Add to types list
+    if ! echo "$CHANGE_TYPES" | grep -q "$CHANGE_TYPE"; then
+        CHANGE_TYPES="$CHANGE_TYPES $CHANGE_TYPE"
+    fi
+
+    # Extract meaningful details
+    case "$CHANGE_TYPE" in
+        feature)
+            FUNCS=$(echo "$FILE_DIFF" | grep "^+.*def " | head -1 | sed 's/.*def //; s/(.*//')
+            if [ ! -z "$FUNCS" ]; then
+                CHANGE_DETAILS="$CHANGE_DETAILS • Added function: $FUNCS"$'\n'
+            fi
+            ;;
+        bugfix)
+            # Look for common bugfix indicators
+            if echo "$FILE_DIFF" | grep -qE "^[+-].*fix|bug|error|issue"; then
+                CHANGE_DETAILS="$CHANGE_DETAILS • Fixed bug in $file"$'\n'
+            fi
+            ;;
+        configuration)
+            # Extract changed settings
+            SETTINGS=$(echo "$FILE_DIFF" | grep "^[+-]" | grep -o '"[^"]*":' | head -3 | tr -d '":')
+            if [ ! -z "$SETTINGS" ]; then
+                CHANGE_DETAILS="$CHANGE_DETAILS • Updated settings in $file: $SETTINGS"$'\n'
+            fi
+            ;;
+        documentation)
+            CHANGE_DETAILS="$CHANGE_DETAILS • Updated documentation in $file"$'\n'
+            ;;
+        notebook)
+            # Check if cells or outputs changed
+            if echo "$FILE_DIFF" | grep -q "cells"; then
+                CHANGE_DETAILS="$CHANGE_DETAILS • Modified notebook cells in $file"$'\n'
+            fi
+            ;;
+    esac
+done
+
+# Create a more meaningful commit message
+CHANGE_TYPES=$(echo "$CHANGE_TYPES" | xargs | sed 's/ /, /g')
+COMMIT_MSG="$BRANCH_DATE: Update $FILES_SUMMARY"
+
+# Add type context if available
+if [ ! -z "$CHANGE_TYPES" ] && [ "$CHANGE_TYPES" != "general" ]; then
+    COMMIT_MSG="$COMMIT_MSG ($CHANGE_TYPES)"
 fi
 
-# Create detailed description for PR
+if [ ! -z "$INSERTIONS" ] && [ ! -z "$DELETIONS" ]; then
+    COMMIT_MSG="$COMMIT_MSG [+$INSERTIONS -$DELETIONS]"
+fi
+
+# Create detailed description for PR with meaningful details
 PR_DESCRIPTION="## Changes on $BRANCH_DATE
 
-**Files Modified**: $CHANGES_COUNT
+**Summary**: Updated $CHANGES_COUNT file(s)
 
-**Files**:
+**Files Modified**:
 $(echo "$CHANGES" | sed 's/^/- /')
+
+**Change Details**:
+$([ ! -z "$CHANGE_DETAILS" ] && echo "$CHANGE_DETAILS" || echo "- Various updates")
 
 **Statistics**: +$INSERTIONS -$DELETIONS
 
