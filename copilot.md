@@ -173,137 +173,173 @@ This will remind users to manually add the images later.
 ## Skill: Commit and Push with Dated Branch
 
 ### Purpose
-Automatically create a dated branch (DD-MM-YYYY format), commit changes, push to both GitHub and GitLab, and create a Pull Request to `main`.
+Automatically create a dated branch (DD-MM-YYYY format), analyze changes, generate meaningful commit messages and PR descriptions, push to both GitHub and GitLab, and create/update Pull Requests to `main`.
 
-### Setup Commands
+### Key Features
 
-Run these commands once to set up the skill:
+✅ **Smart commit messages**: Analyzes changes and creates meaningful commit messages like `17-07-2026: Update 5 file(s) (+123 -45)`
+✅ **Detailed PR descriptions**: Includes file list, statistics, and changes summary
+✅ **PR/MR management**: Creates PR/MR on first commit, updates description on subsequent commits
+✅ **Automatic dated branches**: Branch names follow DD-MM-YYYY format (e.g., `17-07-2026`)
+✅ **Reusable branches**: Multiple commits on the same date stay on the same branch
+✅ **Dual push**: Uses `pushboth` alias to push to both GitHub and GitLab in one step
+✅ **Graceful degradation**: Works without GitHub/GitLab CLI tools
 
-```bash
-# 1. Add the commit-and-push alias to your git config
-git config --local alias.commitpush '!f() {\
-  BRANCH_DATE=$(date +%d-%m-%Y);\
-  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD);\
-  if [ "$CURRENT_BRANCH" != "$BRANCH_DATE" ]; then\
-    git checkout -b "$BRANCH_DATE" 2>/dev/null || git checkout "$BRANCH_DATE";\
-  fi;\
-  git add -A;\
-  git commit -m "Commit changes - $BRANCH_DATE" || echo "Nothing to commit";\
-  git pushboth "$BRANCH_DATE";\
-  echo "✅ Pushed to both remotes on branch: $BRANCH_DATE";\
-  echo "📋 Creating/checking PR...";\
-  GH_AVAILABLE=$(command -v gh >/dev/null 2>&1 && echo "yes" || echo "no");\
-  GLAB_AVAILABLE=$(command -v glab >/dev/null 2>&1 && echo "yes" || echo "no");\
-  if [ "$GH_AVAILABLE" = "yes" ]; then\
-    echo "   GitHub: Checking for existing PR...";\
-    PR_CHECK=$(gh pr list --head "$BRANCH_DATE" --json number 2>/dev/null | grep -c "number");\
-    if [ "$PR_CHECK" -eq 0 ]; then\
-      gh pr create --head "$BRANCH_DATE" --base main --title "Updates from $BRANCH_DATE" --body "Automated PR from dated branch $BRANCH_DATE" 2>/dev/null && echo "   ✅ GitHub PR created" || echo "   ⚠️ Could not create GitHub PR";\
-    else\
-      echo "   ℹ️ GitHub PR already exists";\
-    fi;\
-  else\
-    echo "   ℹ️ GitHub CLI (gh) not installed - skipping GitHub PR";\
-  fi;\
-  if [ "$GLAB_AVAILABLE" = "yes" ]; then\
-    echo "   GitLab: Checking for existing MR...";\
-    MR_CHECK=$(glab mr list --source-branch "$BRANCH_DATE" --json state 2>/dev/null | grep -c "state");\
-    if [ "$MR_CHECK" -eq 0 ]; then\
-      glab mr create --source-branch "$BRANCH_DATE" --target-branch main --title "Updates from $BRANCH_DATE" --description "Automated MR from dated branch $BRANCH_DATE" 2>/dev/null && echo "   ✅ GitLab MR created" || echo "   ⚠️ Could not create GitLab MR";\
-    else\
-      echo "   ℹ️ GitLab MR already exists";\
-    fi;\
-  else\
-    echo "   ℹ️ GitLab CLI (glab) not installed - skipping GitLab MR";\
-  fi;\
-}; f'
-```
+### Setup
+
+The skill is already configured (files created):
+- **Helper script**: `.commitpush-helper.sh` - Generates meaningful messages and manages PRs
+- **Git alias**: `commitpush` - Triggers the helper script
+
+No manual setup needed! Just start using it.
 
 ### Usage
 
-After setup, use these commands in your repository:
-
 ```bash
-# Commit all changes to today's dated branch and push to both remotes + create PR
-git commitpush
+# Make changes to your files
+echo "new content" >> file.txt
+echo "more changes" >> another_file.py
 
-# Or manually use the workflow:
-git pushboth main          # Push all branches to both remotes
+# Commit, push to both remotes, and create/update PR
+git commitpush
 ```
 
 ### How It Works
 
 1. **Get today's date**: Uses `date +%d-%m-%Y` format (e.g., `17-07-2026`)
-2. **Create/switch branch**: Creates a new branch with today's date, or switches to it if it exists
-3. **Stage and commit**: Stages all changes and commits with timestamp message
-4. **Push to both remotes**: Uses the `pushboth` alias to push to GitHub and GitLab simultaneously
-5. **Create PR**:
-   - Checks if GitHub PR exists for the branch (requires `gh` CLI)
-   - Checks if GitLab MR exists for the branch (requires `glab` CLI)
-   - Creates PR/MR only if one doesn't already exist
-   - Skips if CLI tools are not installed
-
-### Prerequisites
-
-For full functionality, install these optional tools:
-
-```bash
-# GitHub CLI (for GitHub PR creation/checking)
-brew install gh
-
-# GitLab CLI (for GitLab MR creation/checking)
-brew install glab
-
-# Already configured: pushboth alias (pushes to both GitHub and GitLab)
-```
+2. **Create/switch branch**: Creates or switches to a branch named with today's date
+3. **Stage all changes**: `git add -A`
+4. **Analyze changes**: 
+   - Counts modified files
+   - Calculates insertions/deletions
+   - Generates file summary
+5. **Create meaningful commit message**: 
+   - Format: `DD-MM-YYYY: Update X file(s) (+insertions -deletions)`
+   - Example: `17-07-2026: Update 5 file(s) (+123 -45)`
+6. **Commit**: Uses the generated meaningful message
+7. **Push to both remotes**: GitHub and GitLab simultaneously
+8. **Manage PR/MR**:
+   - **First commit**: Creates new PR with full description including:
+     - List of modified files
+     - Change statistics
+     - Branch info
+   - **Subsequent commits**: Updates PR/MR description with new file list and stats
+   - Only attempts if CLI tools (`gh` or `glab`) are installed
 
 ### Example Session
 
 ```bash
-# Edit files...
-$ echo "new content" >> file.txt
-
-# Commit and push to both remotes with PR creation
+# First commit on a new date
+$ echo "feature: new parser" >> parser.py
+$ echo "fix: update docs" >> README.md
 $ git commitpush
-✅ Pushed to both remotes on branch: 17-07-2026
-📋 Creating/checking PR...
-   GitHub: Checking for existing PR...
-   ✅ GitHub PR created
-   GitLab: Checking for existing MR...
-   ✅ GitLab MR created
 
-# Make more changes on the same date
-$ echo "more content" >> file.txt
-$ git commitpush
+📌 Switched to branch: 17-07-2026
+📝 Commit message: 17-07-2026: Update 2 file(s) (+10 -2)
+📋 Changes: 2 file(s) | +10 -2
 ✅ Pushed to both remotes on branch: 17-07-2026
-📋 Creating/checking PR...
-   GitHub: Checking for existing PR...
-   ℹ️ GitHub PR already exists
-   GitLab: Checking for existing MR...
-   ℹ️ GitLab MR already exists
+📋 Checking/creating PR & MR...
+   🔹 GitHub:
+      ✅ PR created: https://github.com/.../pull/1
+   🔹 GitLab:
+      ✅ MR created: https://gitlab.com/.../merge_requests/1
+
+✨ Done! Branch: 17-07-2026
 ```
 
-### Features
+```bash
+# More changes on the same day
+$ echo "refactor: cleanup code" >> parser.py
+$ echo "test: add new tests" >> tests/test_parser.py
+$ git commitpush
 
-✅ **Automatic dated branches**: Branch named by today's date (DD-MM-YYYY)
-✅ **Reusable branch**: If branch exists, commits go to the same branch on subsequent uses
-✅ **Dual push**: Uses `pushboth` alias to push to both GitHub and GitLab in one step
-✅ **Smart PR creation**: Only creates PR if one doesn't already exist
-✅ **Graceful degradation**: Works without GitHub/GitLab CLI tools (skips PR creation)
-✅ **Informative output**: Shows what happened at each step
+📝 Commit message: 17-07-2026: Update 3 file(s) (+25 -8)
+📋 Changes: 3 file(s) | +25 -8
+✅ Pushed to both remotes on branch: 17-07-2026
+📋 Checking/creating PR & MR...
+   🔹 GitHub:
+      ✅ PR #1 updated with new description
+   🔹 GitLab:
+      ✅ MR !1 updated with new description
+
+✨ Done! Branch: 17-07-2026
+```
+
+### PR Description Format
+
+Each PR/MR includes:
+```
+## Changes on 17-07-2026
+
+**Files Modified**: 5
+
+**Files**: 
+- parser.py
+- README.md
+- tests/test_parser.py
+- config.yaml
+- docs/guide.md
+
+**Statistics**: +123 -45
+
+---
+*Automatically generated PR from dated branch 17-07-2026*
+```
+
+### Prerequisites
+
+For PR/MR creation and updates, install optional CLI tools:
+
+```bash
+# GitHub PR management
+brew install gh
+gh auth login
+
+# GitLab MR management
+brew install glab
+glab auth login
+```
+
+Without these tools, the skill still works—it commits and pushes, but skips PR/MR creation.
+
+### File Structure
+
+```
+.commitpush-helper.sh    # Helper script that generates messages and manages PRs
+.git/config              # Contains the `commitpush` alias (calls the helper script)
+```
+
+### Advanced: Manual PR/MR Management
+
+If you need to manually create or update a PR/MR:
+
+```bash
+# GitHub PR
+gh pr create --head 17-07-2026 --base main --title "Your title" --body "Your description"
+gh pr edit <PR_NUMBER> --title "New title" --body "New description"
+
+# GitLab MR
+glab mr create --source-branch 17-07-2026 --target-branch main --title "Your title" --description "Your description"
+glab mr update <MR_IID> --title "New title" --description "New description"
+```
 
 ### Troubleshooting
 
-**PR creation fails**
-- Ensure you have `gh` (GitHub) or `glab` (GitLab) CLI installed
-- Ensure you are authenticated: `gh auth login` or `glab auth login`
-- Check that the branch has been pushed: `git branch -a`
-
-**Branch switching fails**
-- Clear git cache: `git remote prune origin && git remote prune gitlab`
+**PR/MR not created**
+- Install GitHub/GitLab CLI: `brew install gh` and/or `brew install glab`
+- Authenticate: `gh auth login` / `glab auth login`
 - Check branch exists: `git branch -a`
 
-**Push to both remotes fails**
-- Verify the `pushboth` alias exists: `git config --get alias.pushboth`
-- Check SSH keys are set up: `ssh -T git@github.com` and `ssh -T git@gitlab.com`
+**Helper script not found**
+- Ensure you're in the repository root: `cd /Users/subarnasekharmuni/PycharmProjects/PythonProject`
+- Verify script exists and is executable: `ls -la .commitpush-helper.sh`
+- The alias uses git's rev-parse to find the script
+
+**Commits not being made**
+- Check for syntax errors: `bash .commitpush-helper.sh 2>&1 | head -20`
+- Ensure you have staged changes: `git status`
+
+**Push fails**
+- Verify SSH keys: `ssh -T git@github.com` and `ssh -T git@gitlab.com`
+- Check pushboth alias: `git config --get alias.pushboth`
 
