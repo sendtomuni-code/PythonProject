@@ -2,7 +2,7 @@
 .venv/
 .idea/
 
-/BasicsOfPython/**/**/*.pdf
-/BasicsOfPython/**/**/*.png
+/Basics/**/**/*.pdf
+/Basics/**/**/*.png
 
 copilot.md
