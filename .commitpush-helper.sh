@@ -71,25 +71,32 @@ echo "📋 Checking/creating PR & MR..."
 if command -v gh >/dev/null 2>&1; then
     echo "   🔹 GitHub:"
 
-    # Check if PR exists
-    PR_JSON=$(gh pr list --head "$BRANCH_DATE" --json number,title 2>/dev/null || echo "")
+    # Detect GitHub repo from remotes
+    GH_REPO=$(git remote get-url github 2>/dev/null | sed 's|.*github.com[:/]||;s|\.git$||' || git remote get-url origin 2>/dev/null | grep github | sed 's|.*github.com[:/]||;s|\.git$||' || echo "")
 
-    if [ -z "$PR_JSON" ] || [ $(echo "$PR_JSON" | grep -c "number" || echo "0") -eq 0 ]; then
-        # Create new PR
-        PR_URL=$(gh pr create --head "$BRANCH_DATE" --base main --title "$COMMIT_MSG" --body "$PR_DESCRIPTION" 2>/dev/null | grep -o "https://[^[:space:]]*" || echo "")
-        if [ ! -z "$PR_URL" ]; then
-            echo "      ✅ PR created: $PR_URL"
-        else
-            echo "      ⚠️ Could not create PR"
-        fi
+    if [ -z "$GH_REPO" ]; then
+        echo "      ℹ️ GitHub repo not configured in remotes"
     else
-        # PR exists - update it
-        PR_NUMBER=$(echo "$PR_JSON" | grep -o '"number":[0-9]*' | grep -o '[0-9]*' | head -1)
-        if [ ! -z "$PR_NUMBER" ]; then
-            # Update PR title and body
-            gh pr edit "$PR_NUMBER" --title "$COMMIT_MSG" --body "$PR_DESCRIPTION" 2>/dev/null && \
-                echo "      ✅ PR #$PR_NUMBER updated with new description" || \
-                echo "      ⚠️ Could not update PR"
+        # Check if PR exists
+        PR_JSON=$(gh pr list --head "$BRANCH_DATE" --repo "$GH_REPO" --json number,title 2>/dev/null || echo "")
+
+        if [ -z "$PR_JSON" ] || [ $(echo "$PR_JSON" | grep -c "number" || echo "0") -eq 0 ]; then
+            # Create new PR
+            PR_URL=$(gh pr create --head "$BRANCH_DATE" --base main --title "$COMMIT_MSG" --body "$PR_DESCRIPTION" --repo "$GH_REPO" 2>/dev/null | grep -o "https://[^[:space:]]*" || echo "")
+            if [ ! -z "$PR_URL" ]; then
+                echo "      ✅ PR created: $PR_URL"
+            else
+                echo "      ⚠️ Could not create PR"
+            fi
+        else
+            # PR exists - update it
+            PR_NUMBER=$(echo "$PR_JSON" | grep -o '"number":[0-9]*' | grep -o '[0-9]*' | head -1)
+            if [ ! -z "$PR_NUMBER" ]; then
+                # Update PR title and body
+                gh pr edit "$PR_NUMBER" --title "$COMMIT_MSG" --body "$PR_DESCRIPTION" --repo "$GH_REPO" 2>/dev/null && \
+                    echo "      ✅ PR #$PR_NUMBER updated with new description" || \
+                    echo "      ⚠️ Could not update PR"
+            fi
         fi
     fi
 else
