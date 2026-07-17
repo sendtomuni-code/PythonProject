@@ -77,12 +77,11 @@ if command -v gh >/dev/null 2>&1; then
     if [ -z "$GH_REPO" ]; then
         echo "      ℹ️ GitHub repo not configured in remotes"
     else
-        # Check if PR exists
+        # Check if PR exists - get full output for extraction
         PR_JSON=$(gh pr list --head "$BRANCH_DATE" --repo "$GH_REPO" --json number,title 2>/dev/null || echo "")
-        PR_COUNT=$(echo "$PR_JSON" | grep -c "number" || echo "0")
 
-        if [ -z "$PR_JSON" ] || [ "$PR_COUNT" -eq 0 ]; then
-            # Create new PR
+        if ! echo "$PR_JSON" | grep -q "number"; then
+            # PR does not exist - Create new PR
             PR_URL=$(gh pr create --head "$BRANCH_DATE" --base main --title "$COMMIT_MSG" --body "$PR_DESCRIPTION" --repo "$GH_REPO" 2>/dev/null | grep -o "https://[^[:space:]]*" || echo "")
             if [ ! -z "$PR_URL" ]; then
                 echo "      ✅ PR created: $PR_URL"
@@ -110,10 +109,9 @@ if command -v glab >/dev/null 2>&1; then
 
     # Check if MR exists
     MR_JSON=$(glab mr list --source-branch "$BRANCH_DATE" --json iid,title 2>/dev/null || echo "")
-    MR_COUNT=$(echo "$MR_JSON" | grep -c "iid" || echo "0")
 
-    if [ -z "$MR_JSON" ] || [ "$MR_COUNT" -eq 0 ]; then
-        # Create new MR
+    if ! echo "$MR_JSON" | grep -q "iid"; then
+        # MR does not exist - Create new MR
         MR_URL=$(glab mr create --source-branch "$BRANCH_DATE" --target-branch main --title "$COMMIT_MSG" --description "$PR_DESCRIPTION" 2>/dev/null | grep -o "https://[^[:space:]]*" || echo "")
         if [ ! -z "$MR_URL" ]; then
             echo "      ✅ MR created: $MR_URL"
