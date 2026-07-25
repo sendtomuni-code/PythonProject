@@ -124,7 +124,7 @@ if command -v glab >/dev/null 2>&1; then
     echo "   🔹 GitLab:"
 
     # Check if MR exists
-    MR_JSON=$(glab mr list --source-branch "$BRANCH_DATE" --json iid,title 2>/dev/null || echo "")
+    MR_JSON=$(glab mr list --source-branch "$BRANCH_DATE" -F json 2>/dev/null || echo "")
 
     if ! echo "$MR_JSON" | grep -q "iid"; then
         # MR does not exist - Create new MR
